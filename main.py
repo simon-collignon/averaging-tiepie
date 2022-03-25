@@ -59,11 +59,13 @@ class Signal():
         self.Ts = self.duration / (self.xs.size - 1) # sampling period
 
 
-my_sig = Signal('chirp_4M_drovr_trig_250K.csv', debug=True)
+my_sig = Signal('record_4.csv', debug=True)
 
-fs = 200e6 # MHz
+
 ys = my_sig.ys
 xs = my_sig.xs
+fs = my_sig.Ts**-1
+print(f'sample frequency is {fs}')
 # lb=244 # molecular
 # ub=-3000
 
@@ -83,7 +85,7 @@ plt.title('Signal')
 # plt.plot(xs[lb:ub] * 1e6 / fs, hpf_ys * 1e3, 'k', linewidth=1)
 # plt.plot(xs[ll:ul] / fs, ys[ll:ul] * 1e3, 'k', linewidth=1)
 
-plt.plot(xs / fs, ys, 'k', linewidth=1)
+plt.plot(xs, ys, 'k', linewidth=1)
 
 plt.xlabel('Time [$\mu$s]')
 plt.ylabel('Voltage [mV]')

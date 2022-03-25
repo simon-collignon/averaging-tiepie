@@ -65,31 +65,31 @@ int main(int argc, char* argv[])
 
     double fs = 200e6;
     // Set sample frequency:
-    ScpSetSampleFrequency(scp, fs); // 1 MHz
+    ScpSetSampleFrequency(scp, fs); // MHz
 
     // Set pre sample ratio:
-    ScpSetPreSampleRatio(scp, 0.0); // 0 %
+    ScpSetPreSampleRatio(scp, 0.0); // %
 
     // Enable channel 1 to measure it
     ScpChSetEnabled(scp, 0, BOOL8_TRUE);
     CHECK_LAST_STATUS();
 
-    // Enable channel 2
-    ScpChSetEnabled(scp, 1, BOOL8_TRUE);
+    // Disable channel 2
+    ScpChSetEnabled(scp, 1, BOOL8_FALSE);
     CHECK_LAST_STATUS();
 
     // Set record length:
-    uint64_t recLength = 32000000;
-    uint64_t recordLength = ScpSetRecordLength(scp, recLength); // 64 MPts
+    uint64_t recLength = 800; // Pts
+    uint64_t recordLength = ScpSetRecordLength(scp, recLength); 
     CHECK_LAST_STATUS();
 
     // Set range:
-    double range = 0.8;
-    ScpChSetRange(scp, 0, 0.8); // 0.4 V
+    double range = 4;
+    ScpChSetRange(scp, 0, range); // Volts
     CHECK_LAST_STATUS();
 
-    ScpChSetRange(scp, 1, 4); // 2 V
-    CHECK_LAST_STATUS();
+    // ScpChSetRange(scp, 1, 4); // Volts
+    // CHECK_LAST_STATUS();
 
     // Set coupling:
     ScpChSetCoupling(scp, 0, CK_DCV); // DC Volt
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
     }
 
     // Setup channel trigger:
-    const uint16_t ch = 1; // Ch 2
+    const uint16_t ch = 0; // Ch 1
 
     // Enable trigger source:
     ScpChTrSetEnabled(scp, ch, BOOL8_TRUE);
@@ -132,12 +132,8 @@ int main(int argc, char* argv[])
     CHECK_LAST_STATUS();
 
     // Clock source:
-    ScpSetClockSource(scp, CS_EXTERNAL);
+    ScpSetClockSource(scp, CS_INTERNAL);
     CHECK_LAST_STATUS();  
-
-    // Clock output:
-    // ScpSetClockOutput(scp, CO_SAMPLE);
-    // CHECK_LAST_STATUS(); 
 
     // Print oscilloscope info:
     printDeviceInfo(scp);
@@ -147,8 +143,8 @@ int main(int argc, char* argv[])
     clock_t start, end;
     double cpu_time_used;
     channelCount = 1; // we only want channel 1!
-    uint16_t acquisitionCount = 100; // number of acquistions that are averaged
-    int cycleLength = 800; // HARDCODED, FIND A BETTER SOLUTION
+    uint16_t acquisitionCount = 1; // number of acquistions that are averaged
+    int cycleLength = 800; // 4us of cycle period
     float cycleCount = recordLength / cycleLength; // WARNING recordLength HAS to be a multiple of cycleLength for the code to work.
     printf("number of cycle is %f \n", cycleCount);
 
@@ -230,28 +226,41 @@ int main(int argc, char* argv[])
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     printf("Elapsed time is %f seconds \n", (float) cpu_time_used);
 
-    // Open file with write/update permissions:
-    const char* filename = "record.csv";
-    FILE* csv = fopen(filename, "w");
+    FILE *csv;
+    char filename[80];
+    int fileNumber = 0; 
+    sprintf(filename, "C:\\Users\\labo-admin\\Documents\\spectrometer-controller\\tiepie\\record_%d.csv", fileNumber);
+
+    while((csv = fopen(filename, "r"))) 
+    {
+      fclose(csv);
+      fileNumber++; 
+      sprintf(filename, "C:\\Users\\labo-admin\\Documents\\spectrometer-controller\\tiepie\\record_%d.csv", fileNumber);
+    }
+
+    // Open file with write/update permissions    
+    csv = fopen(filename, "w");
+
     if(csv)
     {
-      // Write csv header:
-      fprintf(csv, "sampling rate [Sa/s]: %f \n", fs);
-      fprintf(csv, "record length [Sa]: %" PRIu64, recLength);
+      // Write csv header
+      fprintf(csv, "sampling rate [Sa/s]: %d \n", (int) fs);
+      fprintf(csv, "record length [Sa]: %d \n", (int) recLength);
       fprintf(csv, "record duration [s]: %f \n", (float) recLength / fs);
       fprintf(csv, "range [V]: %f \n", (float) range);
       fprintf(csv, "acquisition count: %f \n", (float) acquisitionCount);
-      fprintf(csv, "FID per acquisition count: %f \n", (float) cycleCount);
+      fprintf(csv, "FID per acquisition count: %d \n", (int) cycleCount);
       fprintf(csv, "number of averages: %d \n", (int) (acquisitionCount * cycleCount));
       fprintf(csv, "DAQ elapsed time [s]: %f \n", (float) cpu_time_used);
       fprintf(csv, "Time");
+
       for(uint16_t ch = 0; ch < channelCount; ch++)
       {
         fprintf(csv, ",Ch%" PRIu16, ch + 1);
       }
       fprintf(csv, "\n");
 
-      // Write the data to csv:
+      // Write the data to csv
       for(uint64_t i = 0; i < cycleLength; i++)
       {
         fprintf(csv, "%e", (float) i / fs);
@@ -273,7 +282,7 @@ int main(int argc, char* argv[])
       status = EXIT_FAILURE;
     }
 
-    // Free data buffers:
+    // Free data buffers
     for(uint16_t ch = 0; ch < channelCount; ch++)
     {
       free(averageData[ch]);
