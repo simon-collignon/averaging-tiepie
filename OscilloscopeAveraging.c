@@ -1,5 +1,5 @@
 /**
- * OscilloscopeAveraging.c based on cOscilloscopeBlock.c
+ * OscilloscopeAveraging.c based on OscilloscopeBlock.c
  * @author Simon Collignon
  *
  * This code performs the averaging of a set of block mode measurments.
@@ -63,30 +63,39 @@ int main(int argc, char* argv[])
     // Set measure mode:
     ScpSetMeasureMode(scp, MM_BLOCK);
 
+    double fs = 200e6;
     // Set sample frequency:
-    ScpSetSampleFrequency(scp, 200e6); // 1 MHz
+    ScpSetSampleFrequency(scp, fs); // 1 MHz
 
     // Set pre sample ratio:
-    ScpSetPreSampleRatio(scp, 0.1); // 50 %
+    ScpSetPreSampleRatio(scp, 0.0); // 0 %
 
     // Enable channel 1 to measure it
     ScpChSetEnabled(scp, 0, BOOL8_TRUE);
     CHECK_LAST_STATUS();
 
-    // Disable channel 2
-    ScpChSetEnabled(scp, 1, BOOL8_FALSE);
+    // Enable channel 2
+    ScpChSetEnabled(scp, 1, BOOL8_TRUE);
     CHECK_LAST_STATUS();
 
     // Set record length:
-    uint64_t recordLength = ScpSetRecordLength(scp, 10000000); // 64 MPts
+    uint64_t recLength = 32000000;
+    uint64_t recordLength = ScpSetRecordLength(scp, recLength); // 64 MPts
     CHECK_LAST_STATUS();
 
     // Set range:
-    ScpChSetRange(scp, 0, 4); // 4 V
+    double range = 0.8;
+    ScpChSetRange(scp, 0, 0.8); // 0.4 V
+    CHECK_LAST_STATUS();
+
+    ScpChSetRange(scp, 1, 4); // 2 V
     CHECK_LAST_STATUS();
 
     // Set coupling:
     ScpChSetCoupling(scp, 0, CK_DCV); // DC Volt
+    CHECK_LAST_STATUS();
+
+    ScpChSetCoupling(scp, 1, CK_DCV); // DC Volt
     CHECK_LAST_STATUS();
 
     // Set trigger timeout:
@@ -101,25 +110,25 @@ int main(int argc, char* argv[])
     }
 
     // Setup channel trigger:
-    const uint16_t ch = 0; // Ch 1
+    const uint16_t ch = 1; // Ch 2
 
     // Enable trigger source:
     ScpChTrSetEnabled(scp, ch, BOOL8_TRUE);
     CHECK_LAST_STATUS();
 
     // Kind:
-    ScpChTrSetKind(scp, ch, TK_RISINGEDGE); // Rising edge
+    ScpChTrSetKind(scp, ch, TK_FALLINGEDGE); // Rising edge
     CHECK_LAST_STATUS();
 
     // Level mode: 
     ScpChTrSetLevelMode(scp, ch, TLM_ABSOLUTE); // We want an absolute level in Volts
 
     // Level:
-    ScpChTrSetLevel(scp, ch, 0, .175); // 1.5V trigger level
+    ScpChTrSetLevel(scp, ch, 0, 1); // 1V trigger level
     CHECK_LAST_STATUS();
 
     // Hysteresis:
-    ScpChTrSetHysteresis(scp, ch, 0, 0.05); // 5 %
+    ScpChTrSetHysteresis(scp, ch, 0, 0); // 0 %
     CHECK_LAST_STATUS();
 
     // Clock source:
@@ -140,14 +149,15 @@ int main(int argc, char* argv[])
     channelCount = 1; // we only want channel 1!
     uint16_t acquisitionCount = 100; // number of acquistions that are averaged
     int cycleLength = 800; // HARDCODED, FIND A BETTER SOLUTION
-    float cycleCount = recordLength / cycleLength - 1; // we don't take the first one 
+    float cycleCount = recordLength / cycleLength; // WARNING recordLength HAS to be a multiple of cycleLength for the code to work.
+    printf("number of cycle is %f \n", cycleCount);
 
     start = clock();
 
     // Create data buffers
     float** averageData = malloc(sizeof(float*) * channelCount);
     float** channelData = malloc(sizeof(float*) * channelCount);
-    float** finalData = malloc(sizeof(float*) * channelCount);
+    float** finalData = malloc(sizeof(float*) * channelCount); // changing here to double?
 
     for(uint16_t ch = 0; ch < channelCount; ch++)
     {
@@ -197,7 +207,7 @@ int main(int argc, char* argv[])
         {
           for(uint64_t i = 0; i < recordLength; i++)
           {
-            averageData[ch][i] += channelData[ch][i];
+            averageData[ch][i] += channelData[ch][i]; // we accumulate in averageData buffer
           }
         }
       } 
@@ -206,11 +216,11 @@ int main(int argc, char* argv[])
     // braking averageData into pieces
     for(uint16_t ch = 0; ch < channelCount; ch++)
     {
-      for(uint64_t i = 1; i * cycleLength < recordLength; i++) // we skip the first measurement cycle
+      for(uint64_t i = 0; i * cycleLength < recordLength; i++)
       {
         for(uint64_t j = 0; j < cycleLength; j++)
         {
-          finalData[ch][j] += averageData[ch][i * cycleLength + j];
+          finalData[ch][j] += averageData[ch][i * cycleLength + j]; // we populate finaData buffer
         }
       }
     }
@@ -218,15 +228,23 @@ int main(int argc, char* argv[])
     // timing stop
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("Elapsed time is %f seconds \n", cpu_time_used);
+    printf("Elapsed time is %f seconds \n", (float) cpu_time_used);
 
     // Open file with write/update permissions:
-    const char* filename = "OscilloscopeBlock.csv";
+    const char* filename = "record.csv";
     FILE* csv = fopen(filename, "w");
     if(csv)
     {
       // Write csv header:
-      fprintf(csv, "Sample");
+      fprintf(csv, "sampling rate [Sa/s]: %f \n", fs);
+      fprintf(csv, "record length [Sa]: %" PRIu64, recLength);
+      fprintf(csv, "record duration [s]: %f \n", (float) recLength / fs);
+      fprintf(csv, "range [V]: %f \n", (float) range);
+      fprintf(csv, "acquisition count: %f \n", (float) acquisitionCount);
+      fprintf(csv, "FID per acquisition count: %f \n", (float) cycleCount);
+      fprintf(csv, "number of averages: %d \n", (int) (acquisitionCount * cycleCount));
+      fprintf(csv, "DAQ elapsed time [s]: %f \n", (float) cpu_time_used);
+      fprintf(csv, "Time");
       for(uint16_t ch = 0; ch < channelCount; ch++)
       {
         fprintf(csv, ",Ch%" PRIu16, ch + 1);
@@ -236,15 +254,14 @@ int main(int argc, char* argv[])
       // Write the data to csv:
       for(uint64_t i = 0; i < cycleLength; i++)
       {
-        fprintf(csv, "%" PRIu64, i);
+        fprintf(csv, "%e", (float) i / fs);
         for(uint16_t ch = 0; ch < channelCount; ch++)
         {
-          fprintf(csv, ",%f", finalData[ch][i] / (acquisitionCount * cycleCount));
+          fprintf(csv, ",%.8e", (float) finalData[ch][i] / (acquisitionCount * cycleCount)); // 8 for float, 16 for double
         }
         fprintf(csv, " \n");
       }
 
-      printf("Number of averages is %f \n", acquisitionCount * cycleCount);
       printf("Data written to: %s \n", filename);
 
       // Close file
