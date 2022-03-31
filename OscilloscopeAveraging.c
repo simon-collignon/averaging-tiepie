@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <time.h>
 #include <inttypes.h>
 #include <libtiepie.h>
@@ -63,43 +64,49 @@ int main(int argc, char* argv[])
     // Set measure mode:
     ScpSetMeasureMode(scp, MM_BLOCK);
 
-    double fs = 200e6;
-    // Set sample frequency:
-    ScpSetSampleFrequency(scp, fs); // MHz
-
-    // Set pre sample ratio:
-    ScpSetPreSampleRatio(scp, 0.0); // %
-
     // Enable channel 1 to measure it
     ScpChSetEnabled(scp, 0, BOOL8_TRUE);
     CHECK_LAST_STATUS();
 
-    // Disable channel 2
+    // Disable channel 2 to get the maximum sampling frequency 
     ScpChSetEnabled(scp, 1, BOOL8_FALSE);
     CHECK_LAST_STATUS();
 
+    double fs = 500e6;
+    // Set sample frequency:
+     ScpSetSampleFrequency(scp, fs); // Hz
+
     // Set record length:
-    uint64_t recLength = 800; // Pts
+    uint64_t recLength = 800; // Sa
     uint64_t recordLength = ScpSetRecordLength(scp, recLength); 
     CHECK_LAST_STATUS();
 
+    // Set pre sample ratio:
+	// The trigger point is located at position pre sample ratio * recordLength
+	double sampleRatio = 250e-9 * fs / recordLength; // offset of 250ns
+    ScpSetPreSampleRatio(scp, sampleRatio); 
+
     // Set range:
-    double range = 4;
+    double range = 0.4;
     ScpChSetRange(scp, 0, range); // Volts
     CHECK_LAST_STATUS();
 
-    // ScpChSetRange(scp, 1, 4); // Volts
+    // ScpChSetRange(scp, 1, 4);
     // CHECK_LAST_STATUS();
+	
+	// Set resolution:
+	uint8_t bitRes = 12;
+	ScpSetResolution (scp, bitRes);
 
     // Set coupling:
-    ScpChSetCoupling(scp, 0, CK_DCV); // DC Volt
+    ScpChSetCoupling(scp, 0, CK_ACV); // Volts
     CHECK_LAST_STATUS();
 
-    ScpChSetCoupling(scp, 1, CK_DCV); // DC Volt
-    CHECK_LAST_STATUS();
+    // ScpChSetCoupling(scp, 1, CK_DCV)
+	// // CHECK_LAST_STATUS();
 
     // Set trigger timeout:
-    ScpSetTriggerTimeOut(scp, 100e-3); // 100 ms
+    ScpSetTriggerTimeOut(scp, 100e-3); // ms
     CHECK_LAST_STATUS();
 
     // Disable all channel trigger sources:
@@ -110,41 +117,41 @@ int main(int argc, char* argv[])
     }
 
     // Setup channel trigger:
-    const uint16_t ch = 0; // Ch 1
+    const uint16_t triggerIndex = 0; // EXT 1
 
     // Enable trigger source:
-    ScpChTrSetEnabled(scp, ch, BOOL8_TRUE);
+    DevTrInSetEnabled(scp, triggerIndex, BOOL8_TRUE);
     CHECK_LAST_STATUS();
 
     // Kind:
-    ScpChTrSetKind(scp, ch, TK_FALLINGEDGE); // Rising edge
+    DevTrInSetKind(scp, triggerIndex, TK_RISINGEDGE);
     CHECK_LAST_STATUS();
 
     // Level mode: 
-    ScpChTrSetLevelMode(scp, ch, TLM_ABSOLUTE); // We want an absolute level in Volts
+    // ScpChTrSetLevelMode(scp, ch, TLM_ABSOLUTE); // We want an absolute level in Volts
 
     // Level:
-    ScpChTrSetLevel(scp, ch, 0, 1); // 1V trigger level
-    CHECK_LAST_STATUS();
+    // ScpChTrSetLevel(scp, ch, 0, 1); // 1V trigger level
+    // CHECK_LAST_STATUS();
 
     // Hysteresis:
-    ScpChTrSetHysteresis(scp, ch, 0, 0); // 0 %
-    CHECK_LAST_STATUS();
+    // ScpChTrSetHysteresis(scp, ch, 0, 0); // 0 %
+    // CHECK_LAST_STATUS();
 
     // Clock source:
-    ScpSetClockSource(scp, CS_INTERNAL);
-    CHECK_LAST_STATUS();  
+    ScpSetClockSource(scp, CS_EXTERNAL); 
+	CHECK_LAST_STATUS();  
 
     // Print oscilloscope info:
     printDeviceInfo(scp);
 
-    // modifications start here
+    // --- averaging modifications start here ---
 
     clock_t start, end;
     double cpu_time_used;
     channelCount = 1; // we only want channel 1!
-    uint16_t acquisitionCount = 1; // number of acquistions that are averaged
-    int cycleLength = 800; // 4us of cycle period
+    uint16_t blockCount = 1; // number of acquisition blocks that are averaged together
+    int cycleLength = 800;
     float cycleCount = recordLength / cycleLength; // WARNING recordLength HAS to be a multiple of cycleLength for the code to work.
     printf("number of cycle is %f \n", cycleCount);
 
@@ -175,8 +182,8 @@ int main(int argc, char* argv[])
       }
     }
 
-    // Averaging the acquisitions
-    for(uint16_t i = 0; i < acquisitionCount; i++)
+    // Averaging the acquisition blocks
+    for(uint16_t i = 0; i < blockCount; i++)
     {
       // Start measurement
       ScpStart(scp);
@@ -209,7 +216,7 @@ int main(int argc, char* argv[])
       } 
     }
 
-    // braking averageData into pieces
+    // Averaging the FID cycles
     for(uint16_t ch = 0; ch < channelCount; ch++)
     {
       for(uint64_t i = 0; i * cycleLength < recordLength; i++)
@@ -229,13 +236,14 @@ int main(int argc, char* argv[])
     FILE *csv;
     char filename[80];
     int fileNumber = 0; 
-    sprintf(filename, "C:\\Users\\labo-admin\\Documents\\spectrometer-controller\\tiepie\\record_%d.csv", fileNumber);
+    sprintf(filename, "C:\\Users\\labo-admin\\Documents\\spectrometer-controller\\tiepie\\data\\record_%d.csv", fileNumber);
 
+	// Check if the file already exist and iterate on the suffix number
     while((csv = fopen(filename, "r"))) 
     {
       fclose(csv);
       fileNumber++; 
-      sprintf(filename, "C:\\Users\\labo-admin\\Documents\\spectrometer-controller\\tiepie\\record_%d.csv", fileNumber);
+      sprintf(filename, "C:\\Users\\labo-admin\\Documents\\spectrometer-controller\\tiepie\\data\\record_%d.csv", fileNumber);
     }
 
     // Open file with write/update permissions    
@@ -246,11 +254,13 @@ int main(int argc, char* argv[])
       // Write csv header
       fprintf(csv, "sampling rate [Sa/s]: %d \n", (int) fs);
       fprintf(csv, "record length [Sa]: %d \n", (int) recLength);
-      fprintf(csv, "record duration [s]: %f \n", (float) recLength / fs);
+      fprintf(csv, "record duration [s]: %.8e \n", (float) recLength / fs);
       fprintf(csv, "range [V]: %f \n", (float) range);
-      fprintf(csv, "acquisition count: %f \n", (float) acquisitionCount);
+	  fprintf(csv, "resolution [b]: %d \n", (int) bitRes);
+	  fprintf(csv, "amplitude resolution [V]:%.8e \n", (float) range / pow(2, bitRes - 1));
+      fprintf(csv, "acquisition count: %f \n", (float) blockCount);
       fprintf(csv, "FID per acquisition count: %d \n", (int) cycleCount);
-      fprintf(csv, "number of averages: %d \n", (int) (acquisitionCount * cycleCount));
+      fprintf(csv, "number of averages: %d \n", (int) (blockCount * cycleCount));
       fprintf(csv, "DAQ elapsed time [s]: %f \n", (float) cpu_time_used);
       fprintf(csv, "Time");
 
@@ -266,7 +276,7 @@ int main(int argc, char* argv[])
         fprintf(csv, "%e", (float) i / fs);
         for(uint16_t ch = 0; ch < channelCount; ch++)
         {
-          fprintf(csv, ",%.8e", (float) finalData[ch][i] / (acquisitionCount * cycleCount)); // 8 for float, 16 for double
+          fprintf(csv, ",%.8e", (float) finalData[ch][i] / (blockCount * cycleCount)); // 8 for float, 16 for double
         }
         fprintf(csv, " \n");
       }
