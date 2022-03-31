@@ -77,17 +77,17 @@ int main(int argc, char* argv[])
      ScpSetSampleFrequency(scp, fs); // Hz
 
     // Set record length:
-    uint64_t recLength = 800; // Sa
+    uint64_t recLength = 50000000; // Sa
     uint64_t recordLength = ScpSetRecordLength(scp, recLength); 
     CHECK_LAST_STATUS();
 
     // Set pre sample ratio:
 	// The trigger point is located at position pre sample ratio * recordLength
-	double sampleRatio = 250e-9 * fs / recordLength; // offset of 250ns
+	double sampleRatio = 400e-9 * fs / recordLength; // offset of 250ns
     ScpSetPreSampleRatio(scp, sampleRatio); 
 
     // Set range:
-    double range = 0.4;
+    double range = 0.2;
     ScpChSetRange(scp, 0, range); // Volts
     CHECK_LAST_STATUS();
 
@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
     CHECK_LAST_STATUS();
 
     // Kind:
-    DevTrInSetKind(scp, triggerIndex, TK_RISINGEDGE);
+    DevTrInSetKind(scp, triggerIndex, TK_FALLINGEDGE);
     CHECK_LAST_STATUS();
 
     // Level mode: 
@@ -150,8 +150,8 @@ int main(int argc, char* argv[])
     clock_t start, end;
     double cpu_time_used;
     channelCount = 1; // we only want channel 1!
-    uint16_t blockCount = 1; // number of acquisition blocks that are averaged together
-    int cycleLength = 800;
+    uint16_t blockCount = 200; // number of acquisition blocks that are averaged together
+    int cycleLength = 10000;
     float cycleCount = recordLength / cycleLength; // WARNING recordLength HAS to be a multiple of cycleLength for the code to work.
     printf("number of cycle is %f \n", cycleCount);
 
@@ -258,8 +258,8 @@ int main(int argc, char* argv[])
       fprintf(csv, "range [V]: %f \n", (float) range);
 	  fprintf(csv, "resolution [b]: %d \n", (int) bitRes);
 	  fprintf(csv, "amplitude resolution [V]:%.8e \n", (float) range / pow(2, bitRes - 1));
-      fprintf(csv, "acquisition count: %f \n", (float) blockCount);
-      fprintf(csv, "FID per acquisition count: %d \n", (int) cycleCount);
+      fprintf(csv, "block acquisition count: %f \n", (float) blockCount);
+      fprintf(csv, "FID per block count: %d \n", (int) cycleCount);
       fprintf(csv, "number of averages: %d \n", (int) (blockCount * cycleCount));
       fprintf(csv, "DAQ elapsed time [s]: %f \n", (float) cpu_time_used);
       fprintf(csv, "Time");

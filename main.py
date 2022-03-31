@@ -59,7 +59,7 @@ class Signal():
         self.Ts = self.duration / (self.xs.size - 1) # sampling period
 
 
-my_sig = Signal('record_0.csv', debug=True)
+my_sig = Signal('./data/record_0.csv', debug=True)
 
 
 ys = my_sig.ys
@@ -80,7 +80,6 @@ print(f'sample frequency is {fs}')
 # b, a = signal.butter(4, 90e6, fs=fs)
 # hpf_ys = signal.filtfilt(b, a, hpf_ys)
 
-plt.figure()
 # plt.plot(xs[lb:ub] * 1e6 / fs, hpf_ys * 1e3, 'k', linewidth=1)
 # plt.plot(xs[ll:ul] / fs, ys[ll:ul] * 1e3, 'k', linewidth=1)
 
@@ -89,15 +88,15 @@ fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 
 # Major ticks every 20, minor ticks every 5
-major_ticks = np.linspace(-0.4, 0.3998046875, 2**12)
-
-ax.set_yticks(major_ticks)
+major_ticks, dV = np.linspace(-0.4, 0.39980468749, 2**12, retstep=True)
+print(f"Amplitude step is: {dV} [V]")
+#ax.set_yticks(major_ticks)
 
 # And a corresponding grid
 ax.grid()
 
 # Or if you want different settings for the grids:
-ax.grid(which='major', alpha=0.2)
+# ax.grid(which='major', alpha=0.2)
 ax.set_title('Signal')
 ax.plot(xs, ys, 'k', linewidth=1)
 
