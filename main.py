@@ -65,7 +65,7 @@ my_sig = Signal('./data/record_0.csv', debug=True)
 ys = my_sig.ys
 xs = my_sig.xs
 fs = my_sig.Ts**-1
-print(f'sample frequency is {fs}')
+# print(f'sample frequency is {fs}')
 # lb=244 # molecular
 # ub=-3000
 
