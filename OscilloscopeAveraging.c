@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
     clock_t start, end;
     double cpu_time_used;
     channelCount = 1; // we only want channel 1!
-    uint16_t blockCount = 20; // number of acquisition blocks that are averaged together
+    uint16_t blockCount = 200; // number of acquisition blocks that are averaged together
     int cycleLength = 10000;
     float cycleCount = recordLength / cycleLength; // WARNING recordLength HAS to be a multiple of cycleLength for the code to work.
     printf("number of cycle is %f \n", cycleCount);
