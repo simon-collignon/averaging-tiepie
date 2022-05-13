@@ -1,8 +1,9 @@
 /**
- * OscilloscopeAveraging.c based on OscilloscopeBlock.c
+ * OscilloscopeAveragingBlock.c based on OscilloscopeBlock.c
  * @author Simon Collignon
  *
- * This code performs the averaging of a set of block mode measurments.
+ * This code performs the averaging of a set of block mode measurments. But it keeps the block
+ * as it is.
  *
  */
 
@@ -150,7 +151,7 @@ int main(int argc, char* argv[])
     clock_t start, end;
     double cpu_time_used;
     channelCount = 1; // we only want channel 1!
-    uint16_t blockCount = 10; // number of acquisition blocks that are averaged together
+    uint16_t blockCount = 2; // number of acquisition blocks that are averaged together
     int cycleLength = 10000;
     float cycleCount = recordLength / cycleLength; // WARNING recordLength HAS to be a multiple of cycleLength for the code to work.
     printf("number of cycle is %f \n", cycleCount);
@@ -216,18 +217,6 @@ int main(int argc, char* argv[])
       } 
     }
 
-    // Averaging the FID cycles
-    for(uint16_t ch = 0; ch < channelCount; ch++)
-    {
-      for(uint64_t i = 0; i * cycleLength < recordLength; i++)
-      {
-        for(uint64_t j = 0; j < cycleLength; j++)
-        {
-          finalData[ch][j] += (float) averageData[ch][i * cycleLength + j]; // we populate finaData buffer
-        }
-      }
-    }
-
     // timing stop
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -260,7 +249,7 @@ int main(int argc, char* argv[])
 	  fprintf(csv, "amplitude resolution [V]:%.8e \n", (float) range / pow(2, bitRes - 1));
       fprintf(csv, "block acquisition count: %f \n", (float) blockCount);
       fprintf(csv, "FID per block count: %d \n", (int) cycleCount);
-      fprintf(csv, "number of averages: %d \n", (int) (blockCount * cycleCount));
+      fprintf(csv, "number of averages: %d \n", (int) (blockCount));
       fprintf(csv, "DAQ elapsed time [s]: %f \n", (float) cpu_time_used);
       fprintf(csv, "Time");
 
@@ -271,12 +260,12 @@ int main(int argc, char* argv[])
       fprintf(csv, "\n");
 
       // Write the data to csv
-      for(uint64_t i = 0; i < cycleLength; i++)
+      for(uint64_t i = 0; i < recordLength; i++)
       {
         fprintf(csv, "%e", (float) i / fs);
         for(uint16_t ch = 0; ch < channelCount; ch++)
         {
-          fprintf(csv, ",%.8e", (float) finalData[ch][i] / (blockCount * cycleCount)); // 8 for float, 16 for double
+          fprintf(csv, ",%.8e", (float) averageData[ch][i] / blockCount); // 8 for float, 16 for double
         }
         fprintf(csv, " \n");
       }
