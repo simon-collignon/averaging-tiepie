@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     ScpSetPreSampleRatio(scp, sampleRatio); 
 
     // Set range:
-    double range = 0.4;
+    double range = 0.8;
     ScpChSetRange(scp, 0, range); // Volts
     CHECK_LAST_STATUS();
 

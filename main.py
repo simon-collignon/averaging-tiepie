@@ -66,8 +66,8 @@ ys = my_sig.ys
 xs = my_sig.xs
 fs = my_sig.Ts**-1
 # print(f'sample frequency is {fs}')
-# lb=244 # molecular
-# ub=-3000
+lb= int(1.625 * 500) # molecular
+ub= int(6.433 * 500)
 
 # ll = 20 # chirp
 # ul = 230
@@ -98,27 +98,32 @@ ax.grid()
 # Or if you want different settings for the grids:
 # ax.grid(which='major', alpha=0.2)
 ax.set_title('Signal')
+ax.axvline(xs[lb])
+ax.axvline(xs[ub])
 ax.plot(xs, ys, 'k', linewidth=1)
 
 ax.set_xlabel('Time [$\mu$s]')
 ax.set_ylabel('Voltage [mV]')
 
+
+
+yhat = np.abs(np.fft.rfft(ys[lb:ub]))
+xhat = np.fft.rfftfreq(xs[lb:ub].size, (500e6)**-1)
+
+plt.figure()
+plt.title('Spectrum')
+
+plt.plot(xhat[200:] / 1e6, yhat[200:], 'k', linewidth=2)
+plt.axvline(78.6)
+
+plt.xlabel('Frequency [MHz]')
+plt.ylabel('Intensity [a.u.]')
+plt.tight_layout()
+
 plt.show()
 
 
-# yhat = np.abs(np.fft.rfft(hpf_ys))
-# xhat = np.fft.rfftfreq(xs[lb:ub].size, (200e6)**-1)
-
-# plt.figure()
-# plt.title('Spectrum')
-
-# plt.plot(xhat / 1e6, yhat, 'k', linewidth=1)
-
-# plt.xlabel('Frequency [MHz]')
-# plt.ylabel('Intensity [a.u.]')
-# plt.tight_layout()
-
-# # plt.show()
+# plt.show()
 
 # # plt.savefig('cp_noise.pdf')
 
