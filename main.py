@@ -55,19 +55,19 @@ class Signal():
         data = np.genfromtxt(self.filepath, delimiter=",", skip_header=self.header_length, filling_values=0)
         self.xs = data[:, 0] # time points
         self.ys = data[:, 1] # signal points
-        self.duration = self.xs[-1] - self.xs[0] # signal duration
-        self.Ts = self.duration / (self.xs.size - 1) # sampling period
+        # self.duration = self.xs[-1] - self.xs[0] # signal duration
+        # self.Ts = self.duration / (self.xs.size - 1) # sampling period
 
 
-my_sig = Signal('./data/record_0.csv', debug=True)
+my_sig = Signal('./data/record_12.csv', debug=True)
 
 
 ys = my_sig.ys
-xs = my_sig.xs
-fs = my_sig.Ts**-1
+# xs = my_sig.xs
+# fs = my_sig.Ts**-1
 # print(f'sample frequency is {fs}')
-lb= int(1.625 * 500) # molecular
-ub= int(6.433 * 500)
+# lb= int(1.625 * 500) # molecular
+# ub= int(6.433 * 500)
 
 # ll = 20 # chirp
 # ul = 230
@@ -88,8 +88,8 @@ fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 
 # Major ticks every 20, minor ticks every 5
-major_ticks, dV = np.linspace(-0.4, 0.39980468749, 2**12, retstep=True)
-print(f"Amplitude step is: {dV} [V]")
+# major_ticks, dV = np.linspace(-0.4, 0.39980468749, 2**12, retstep=True)
+# print(f"Amplitude step is: {dV} [V]")
 #ax.set_yticks(major_ticks)
 
 # And a corresponding grid
@@ -98,27 +98,27 @@ ax.grid()
 # Or if you want different settings for the grids:
 # ax.grid(which='major', alpha=0.2)
 ax.set_title('Signal')
-ax.axvline(xs[lb])
-ax.axvline(xs[ub])
-ax.plot(xs, ys, 'k', linewidth=1)
+# ax.axvline(xs[lb])
+# ax.axvline(xs[ub])
+ax.plot(ys, 'k', linewidth=1)
 
-ax.set_xlabel('Time [$\mu$s]')
+# ax.set_xlabel('Time [$\mu$s]')
 ax.set_ylabel('Voltage [mV]')
 
 
 
-yhat = np.abs(np.fft.rfft(ys[lb:ub]))
-xhat = np.fft.rfftfreq(xs[lb:ub].size, (500e6)**-1)
+# yhat = np.abs(np.fft.rfft(ys[lb:ub]))
+# xhat = np.fft.rfftfreq(xs[lb:ub].size, (500e6)**-1)
 
-plt.figure()
-plt.title('Spectrum')
+# plt.figure()
+# plt.title('Spectrum')
 
-plt.plot(xhat[200:] / 1e6, yhat[200:], 'k', linewidth=2)
-plt.axvline(78.6)
+# plt.plot(xhat[200:] / 1e6, yhat[200:], 'k', linewidth=2)
+# plt.axvline(78.6)
 
-plt.xlabel('Frequency [MHz]')
-plt.ylabel('Intensity [a.u.]')
-plt.tight_layout()
+# plt.xlabel('Frequency [MHz]')
+# plt.ylabel('Intensity [a.u.]')
+# plt.tight_layout()
 
 plt.show()
 

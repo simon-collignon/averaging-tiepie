@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     ScpSetPreSampleRatio(scp, sampleRatio); 
 
     // Set range:
-    double range = 0.8;
+    double range = 0.4;
     ScpChSetRange(scp, 0, range); // Volts
     CHECK_LAST_STATUS();
 
@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
     clock_t start, end;
     double cpu_time_used;
     channelCount = 1; // we only want channel 1!
-    uint16_t blockCount = 10; // number of acquisition blocks that are averaged together
+    uint16_t blockCount = 20; // number of acquisition blocks that are averaged together
     int cycleLength = 10000;
     float cycleCount = recordLength / cycleLength; // WARNING recordLength HAS to be a multiple of cycleLength for the code to work.
     printf("number of cycle is %f \n", cycleCount);
@@ -256,8 +256,8 @@ int main(int argc, char* argv[])
       fprintf(csv, "record length [Sa]: %d \n", (int) recLength);
       fprintf(csv, "record duration [s]: %.8e \n", (float) recLength / fs);
       fprintf(csv, "range [V]: %f \n", (float) range);
-	  fprintf(csv, "resolution [b]: %d \n", (int) bitRes);
-	  fprintf(csv, "amplitude resolution [V]:%.8e \n", (float) range / pow(2, bitRes - 1));
+	    fprintf(csv, "resolution [b]: %d \n", (int) bitRes);
+	    fprintf(csv, "amplitude resolution [V]:%.8e \n", (float) range / pow(2, bitRes - 1));
       fprintf(csv, "block acquisition count: %f \n", (float) blockCount);
       fprintf(csv, "FID per block count: %d \n", (int) cycleCount);
       fprintf(csv, "number of averages: %d \n", (int) (blockCount * cycleCount));
